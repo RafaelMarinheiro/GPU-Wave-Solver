@@ -1,9 +1,4 @@
-#include "wave_solver.h"
-
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#include <cstdio>
+#include "cuda_pml_wave_2d.h"
 
 struct Wave_2d_sim_data_t {
 	Number_t xmin, ymin;
@@ -22,17 +17,20 @@ struct Wave_2d_sim_data_t {
 	Number_t * ubuf;
 
 	int step;
+
+	#ifdef USE_CUDA
+
+	#endif USE_CUDA
 };
 
 
-
-Wave_2d_t wave_sim_init(Number_t xmin, Number_t ymin,
+Cuda_PML_2d_t wave_sim_init(Number_t xmin, Number_t ymin,
 						Number_t xmax, Number_t ymax,
 						Number_t c, Number_t dt, 
 						int nx, int ny,
 						Number_t (*init_function)(Number_t, Number_t, void *),
 						void * ctx){
-	Wave_2d_t wave = (Wave_2d_t) malloc(sizeof(Wave_2d_sim_data_t));
+	Cuda_PML_2d_t wave = (Cuda_PML_2d_t) malloc(sizeof(Wave_2d_sim_data_t));
 	
 	wave->xmin = xmin;
 	wave->ymin = ymin;
@@ -71,28 +69,27 @@ Wave_2d_t wave_sim_init(Number_t xmin, Number_t ymin,
 	return wave;
 }
 
-void wave_sim_free(Wave_2d_t wave){
+void wave_sim_free(Cuda_PML_2d_t wave){
 	free(wave->ubuf);
 	free(wave);
 }
 
-Number_t wave_sim_get_x(Wave_2d_t wave, int j){
+Number_t wave_sim_get_x(Cuda_PML_2d_t wave, int j){
 	return ((j-1)*wave->xmax + (wave->nx - j)*wave->xmin)/(wave->nx-1);
 }
 
-Number_t wave_sim_get_y(Wave_2d_t wave, int i){
+Number_t wave_sim_get_y(Cuda_PML_2d_t wave, int i){
 	return ((i-1)*wave->ymax + (wave->ny - i)*wave->ymin)/(wave->ny-1);
 }
 
-Number_t * wave_sim_get_u(Wave_2d_t wave, int offset){
+Number_t * wave_sim_get_u(Cuda_PML_2d_t wave, int offset){
 	return wave->ubuf + ((wave->step + offset + 3)%3)*(wave->nx+2)*(wave->ny+2);
 }
 
-void wave_sim_step(Wave_2d_t wave){
-	clock_t t;
+void wave_sim_step(Cuda_PML_2d_t wave){
+	#ifdef USE_CUDA
 
-	t = clock();
-	
+	#else
 		Number_t * uold = wave_sim_get_u(wave, -1);
 		Number_t * u 	= wave_sim_get_u(wave,  0);
 		Number_t * unew = wave_sim_get_u(wave,  1);
@@ -135,19 +132,14 @@ void wave_sim_step(Wave_2d_t wave){
 				cache[2][0] = cache[2][1]; cache[2][1] = cache[2][2];
 			}
 		}
-	t = clock()-t;
-	printf("Step Time: %fms\n", 1000*((float)t)/CLOCKS_PER_SEC);
-	
+
 		wave->step++;
 		wave->t += wave->dt;
-	t = clock();
 		wave_sim_apply_boundary(wave);
-	t = clock()-t;
-	printf("Boundary Time: %fms\n", 1000*((float)t)/CLOCKS_PER_SEC);
-	
+	#endif
 }
 
-void wave_sim_apply_boundary(Wave_2d_t wave){
+void wave_sim_apply_boundary(Cuda_PML_2d_t wave){
 	Number_t * u = wave_sim_get_u(wave,  0);
 	int nx = wave->nx;
 	int ny = wave->ny;
