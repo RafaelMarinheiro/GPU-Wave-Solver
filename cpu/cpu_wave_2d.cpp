@@ -1,11 +1,11 @@
-#include "wave_solver.h"
+#include "cpu_wave_2d.h"
 
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <cstdio>
 
-struct Wave_2d_sim_data_t {
+struct Cpu_Wave_2d_sim_data_t {
 	Number_t xmin, ymin;
 	Number_t xmax, ymax;
 
@@ -26,13 +26,13 @@ struct Wave_2d_sim_data_t {
 
 
 
-Wave_2d_t wave_sim_init(Number_t xmin, Number_t ymin,
+Cpu_Wave_2d_t wave_sim_init(Number_t xmin, Number_t ymin,
 						Number_t xmax, Number_t ymax,
 						Number_t c, Number_t dt, 
 						int nx, int ny,
 						Number_t (*init_function)(Number_t, Number_t, void *),
 						void * ctx){
-	Wave_2d_t wave = (Wave_2d_t) malloc(sizeof(Wave_2d_sim_data_t));
+	Cpu_Wave_2d_t wave = (Cpu_Wave_2d_t) malloc(sizeof(Cpu_Wave_2d_sim_data_t));
 	
 	wave->xmin = xmin;
 	wave->ymin = ymin;
@@ -71,24 +71,24 @@ Wave_2d_t wave_sim_init(Number_t xmin, Number_t ymin,
 	return wave;
 }
 
-void wave_sim_free(Wave_2d_t wave){
+void wave_sim_free(Cpu_Wave_2d_t wave){
 	free(wave->ubuf);
 	free(wave);
 }
 
-Number_t wave_sim_get_x(Wave_2d_t wave, int j){
+Number_t wave_sim_get_x(Cpu_Wave_2d_t wave, int j){
 	return ((j-1)*wave->xmax + (wave->nx - j)*wave->xmin)/(wave->nx-1);
 }
 
-Number_t wave_sim_get_y(Wave_2d_t wave, int i){
+Number_t wave_sim_get_y(Cpu_Wave_2d_t wave, int i){
 	return ((i-1)*wave->ymax + (wave->ny - i)*wave->ymin)/(wave->ny-1);
 }
 
-Number_t * wave_sim_get_u(Wave_2d_t wave, int offset){
+Number_t * wave_sim_get_u(Cpu_Wave_2d_t wave, int offset){
 	return wave->ubuf + ((wave->step + offset + 3)%3)*(wave->nx+2)*(wave->ny+2);
 }
 
-void wave_sim_step(Wave_2d_t wave){
+void wave_sim_step(Cpu_Wave_2d_t wave){
 	clock_t t;
 
 	t = clock();
@@ -147,7 +147,7 @@ void wave_sim_step(Wave_2d_t wave){
 	
 }
 
-void wave_sim_apply_boundary(Wave_2d_t wave){
+void wave_sim_apply_boundary(Cpu_Wave_2d_t wave){
 	Number_t * u = wave_sim_get_u(wave,  0);
 	int nx = wave->nx;
 	int ny = wave->ny;

@@ -4,7 +4,7 @@
 #ifdef USE_CUDA
 	#include "cuda/cuda_wave_2d.h"
 #else
-	#include "wave_solver.h"
+	#include "cpu/cpu_wave_2d.h"
 #endif
 
 
@@ -29,12 +29,13 @@ int main(int argc, char** argv){
 	#ifdef USE_CUDA
 		Cuda_Wave_2d_t wave;
 	#else
-		Wave_2d_t wave;
+		Cpu_Wave_2d_t wave;
 	#endif
 
-	int nx = 12000;
+	int nx = 7000;
 	char filename[1024];
 	int ny = nx;
+	printf("%.3lf/n", 3*sizeof(Number_t)*(nx+2)*(nx+2)/(1024.0*1024.0*1024.0));
 	int nsteps = 5;
 	Number_t c = 0.34029;
 	Number_t * u = NULL;
