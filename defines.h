@@ -1,6 +1,6 @@
 #ifndef DEFINES_H
 #define DEFINES_H
 
-	typedef float Number_t;
+	typedef double Number_t;
 
 #endif

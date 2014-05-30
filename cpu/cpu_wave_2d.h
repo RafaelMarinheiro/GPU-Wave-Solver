@@ -1,5 +1,5 @@
-#ifndef WAVE_SOLVER_H
-#define WAVE_SOLVER_H
+#ifndef CPU_2D_WAVE_SOLVER_H
+#define CPU_2D_WAVE_SOLVER_H
 
 #include "../defines.h"
 
@@ -7,20 +7,6 @@ struct Cpu_Wave_2d_sim_data_t;
 
 typedef Cpu_Wave_2d_sim_data_t * Cpu_Wave_2d_t;
 
-/**
- * @brief Initializes the simulation data
- * 
- * @param xmin Minimum X of the domain
- * @param ymin Minimum Y of the domain
- * @param xmax Maximum X of the domain
- * @param ymax Maximum Y of the domain
- * @param c Constant of the Wave Equation
- * @param dt Time Step
- * @param dx Grid Cell Size
- * @param init_function Function to initialize the wave
- * @param ctx Context passed to init_function
- * @return A struct that describes the simulation data
- */
 Cpu_Wave_2d_t wave_sim_init(Number_t xmin, Number_t ymin,
 						Number_t xmax, Number_t ymax,
 						Number_t c, Number_t dt,
@@ -43,4 +29,3 @@ void wave_sim_step(Cpu_Wave_2d_t wave);
 void wave_sim_apply_boundary(Cpu_Wave_2d_t wave);
 
 #endif 
-/* WAVE_SOLVER_H */
