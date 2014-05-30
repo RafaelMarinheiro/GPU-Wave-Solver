@@ -4,8 +4,8 @@ __global__ void cuda_wave_2d_kernel(Number_t * __restrict__ unew,
 									const int nx, const int ny,
 									const Number_t c, const Number_t dt,
 									const Number_t dx, const Number_t dy){
-	#define BDIMX 32
-	#define BDIMY 32
+	#define BDIMX 16
+	#define BDIMY 16
 
 	__shared__ Number_t cache[BDIMX + 2][BDIMY + 2];
 
