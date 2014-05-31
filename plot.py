@@ -22,5 +22,6 @@ for i in range(0, 200):
 	print "Frame " + str(i)
 	data = numpy.loadtxt("frames/frame" + str(i))
 	figure(figsize=(5,5))
-	imshow(data, aspect='auto', cmap=get_cmap('seismic'),origin="lower")
+	# imshow(data, aspect='auto', cmap=get_cmap('seismic'),origin="lower")
+	imshow(data, aspect='auto', cmap=get_cmap('seismic'), vmin=-0.1, vmax=0.1,origin="lower")
 	savefig("frames/frame" + str(i) + ".png",dpi=100,facecolor='gray')

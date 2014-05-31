@@ -2,7 +2,7 @@
 #include <cmath>
 
 #ifdef USE_CUDA
-	
+	#include "cuda/cuda_pml_wave_2d.h"
 #else
 	#include "cpu/cpu_pml_wave_2d.h"
 #endif
@@ -10,7 +10,7 @@
 
 Number_t gaussian(Number_t x, Number_t y, void * ctx){
 	Number_t stddev = 0.01;
-	Number_t mean = 0.3;
+	Number_t mean = 0;
 	Number_t var2 = stddev*stddev*2;
 	Number_t term = sqrt((x-mean)*(x-mean) + (y-mean)*(y-mean));
 	// Number_t term = x-mean;
@@ -28,12 +28,12 @@ void writeToFile(FILE * fp, Number_t * u, int nx, int ny){
 
 int main(int argc, char** argv){
 	#ifdef USE_CUDA
-		Cuda_Wave_2d_t wave;
+		Cuda_PML_Wave_2d_t wave;
 	#else
 		Cpu_PML_Wave_2d_t wave;
 	#endif
 
-	int nx = 12000;
+	int nx = 18000;
 	char filename[1024];
 	int ny = nx;
 	printf("%.3lf/n", 3*sizeof(Number_t)*(nx)*(nx)/(1024.0*1024.0*1024.0));
@@ -45,8 +45,11 @@ int main(int argc, char** argv){
 						nx, ny,
 						gaussian,
 						NULL,
-						0.2,
-						10000.0);
+						0.1,
+						0.0
+						// 0.2,
+						// 10000.0
+						);
 
 
 	for(int step = 0; step < nsteps; step++){

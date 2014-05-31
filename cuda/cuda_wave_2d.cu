@@ -2,9 +2,10 @@
 
 #include <cuda_runtime.h>
 
-#include "cuda_wave_2d_kernel.cu"
 #include <ctime>
 #include <cstdio>
+
+#include "cuda_wave_2d_kernel.cu"
 
 struct Cuda_Wave_2d_sim_data_t {
 	Number_t xmin, ymin;
