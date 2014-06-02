@@ -10,7 +10,7 @@
 
 Number_t gaussian(Number_t x, Number_t y, void * ctx){
 	Number_t stddev = 0.01;
-	Number_t mean = 0;
+	Number_t mean = 0.2;
 	Number_t var2 = stddev*stddev*2;
 	Number_t term = sqrt((x-mean)*(x-mean) + (y-mean)*(y-mean));
 	// Number_t term = x-mean;
@@ -33,22 +33,22 @@ int main(int argc, char** argv){
 		Cpu_PML_Wave_2d_t wave;
 	#endif
 
-	int nx = 18000;
+	int nx = 256;
 	char filename[1024];
 	int ny = nx;
 	printf("%.3lf/n", 3*sizeof(Number_t)*(nx)*(nx)/(1024.0*1024.0*1024.0));
-	int nsteps = 10;
+	int nsteps = 200;
 	Number_t c = 0.34029;
 	Number_t * u = NULL;
 	wave = wave_sim_init(0, 0, 1, 1,
-						c, 0.5/(nx*c),
+						c, 0.6/(nx*c),
 						nx, ny,
 						gaussian,
 						NULL,
 						0.1,
 						0.0
-						// 0.2,
-						// 10000.0
+						// 0.1,
+						// 100.0
 						);
 
 
@@ -56,9 +56,9 @@ int main(int argc, char** argv){
 		u = wave_sim_get_u(wave);
 		printf("Frame %d\n", step);
 		sprintf(filename, "frames/frame%d", step);
-		// FILE *fp = fopen(filename, "w+");
-		// writeToFile(fp, u, nx, ny);
-		// fclose(fp);
+		FILE *fp = fopen(filename, "w+");
+		writeToFile(fp, u, nx, ny);
+		fclose(fp);
 		wave_sim_step(wave);
 	}
 
