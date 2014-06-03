@@ -2,19 +2,35 @@
 #include <cmath>
 
 #ifdef USE_CUDA
-	#include "cuda/cuda_pml_wave_2d.h"
+	#include "cuda/cuda_PAN_wave_3d.h"
 #else
 	#include "cpu/cpu_pml_wave_2d.h"
 #endif
 
 
-Number_t gaussian(Number_t x, Number_t y, void * ctx){
-	Number_t stddev = 0.01;
-	Number_t mean = 0.35;
-	Number_t var2 = stddev*stddev*2;
-	Number_t term = sqrt((x-mean)*(x-mean) + (y-mean)*(y-mean));
-	// Number_t term = x-mean;
-	return stddev*exp(-term*term/var2)/sqrt(acos(-1)*var2);
+Number_t zeros(const Number_t x, const Number_t y, const Number_t z){
+	return 0;
+}
+
+bool sphere(const Number_t x, const Number_t y, const Number_t z){
+	Number_t d = sqrt(  (x-0.5)*(x-0.5)
+					  + (y-0.5)*(y-0.5)
+					  + (z-0.5)*(z-0.5));
+	return (d < 0.1);
+}
+
+Number_t sphereGradient(const Number_t x, const Number_t y, const Number_t z, int dim){
+	Number_t d = sqrt(  (x-0.5)*(x-0.5)
+					  + (y-0.5)*(y-0.5)
+					  + (z-0.5)*(z-0.5));
+
+	if(dim == 0){
+		return (x-0.5)/d;
+	} else if(dim == 1){
+		return (y-0.5)/d;
+	} else{
+		return (z-0.5)/d;
+	}
 }
 
 void writeToFile(FILE * fp, Number_t * u, int nx, int ny){
@@ -28,28 +44,32 @@ void writeToFile(FILE * fp, Number_t * u, int nx, int ny){
 
 int main(int argc, char** argv){
 	#ifdef USE_CUDA
-		Cuda_PML_Wave_2d_t wave;
+		Cuda_PAN_Wave_3d_t wave;
 	#else
 		Cpu_PML_Wave_2d_t wave;
 	#endif
 
-	int nx = 2200;
+	int nx = 176;
+	double cellsize = 1.0/nx;
 	char filename[1024];
-	int ny = nx;
 	printf("%.3lf/n", 3*sizeof(Number_t)*(nx)*(nx)/(1024.0*1024.0*1024.0));
 	int nsteps = 10;
 	Number_t c = 0.34029;
+	Number_t dt = 0.6/(nx*c);
 	Number_t * u = NULL;
-	wave = wave_sim_init(0, 0, 1, 1,
-						c, 0.6/(nx*c),
-						nx, ny,
-						gaussian,
-						NULL,
-						// 0.1,
-						// 0.0
-						0.1,
-						100.0
-						);
+	wave = wave_sim_init(0, 0, 0,
+						 1, 1, 1,
+						 c, 0.6/(nx*c),
+						 cellsize,
+						 0,
+						 NULL,
+						 &zeros,
+						 &sphere,
+						 0.5, 0.5, 0.5,
+						 &sphereGradient,
+						 0.1,
+						 100,
+						 dt*10);
 
 
 	for(int step = 0; step < nsteps; step++){

@@ -7,7 +7,7 @@
 
 #include "cuda_helper.h"
 
-#include "cuda_pml_wave_2d_kernel.cu"
+#include "cuda_pml_wave_2d_kernel_test.cu"
 
 struct Cuda_PML_Wave_2d_sim_data_t {
 	Number_t xmin, ymin;
@@ -29,10 +29,24 @@ struct Cuda_PML_Wave_2d_sim_data_t {
 
 	Number_t * ubuf;
 	Number_t * ubuf_d;
+	bool * isBulk;
+	bool * isBulk_d;
+	Number_t * gradient;
+	Number_t * gradient_d;
+	Number_t radius;
 };
 
 Number_t * wave_sim_get_u(Cuda_PML_Wave_2d_t wave){
 	return wave->ubuf;
+}
+
+double gradient(double x, double y, int dim){
+	double dist = sqrt((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5));
+	if(dim == 0){
+		return (x-0.5)/dist;
+	} else{
+		return (y-0.5)/dist;
+	}
 }
 
 Cuda_PML_Wave_2d_t wave_sim_init(Number_t xmin, Number_t ymin,
@@ -49,7 +63,8 @@ Cuda_PML_Wave_2d_t wave_sim_init(Number_t xmin, Number_t ymin,
 	wave->ymin = ymin;
 	wave->xmax = xmax;
 	wave->ymax = ymax;
-
+	wave->radius = 0.1;
+	Number_t radius = wave->radius;
 	wave->c = c;
 
 	wave->dt = dt;
@@ -67,10 +82,33 @@ Cuda_PML_Wave_2d_t wave_sim_init(Number_t xmin, Number_t ymin,
 	wave->pml_strength = pml_strength;
 	wave->ubuf = NULL;
 	cudaCheckError(cudaMallocHost((void**)&wave->ubuf, 3*(wave->nx)*(wave->ny)*sizeof(Number_t)));
+	wave->isBulk = NULL;
+	cudaCheckError(cudaMallocHost((void**)&wave->isBulk, (wave->nx)*(wave->ny)*sizeof(bool)));
+	wave->gradient = NULL;
+	cudaCheckError(cudaMallocHost((void**)&wave->gradient, 2*(wave->nx)*(wave->ny)*sizeof(Number_t)));
+	
 	wave->ubuf_d = NULL;
 	cudaCheckError(cudaMalloc((void**)&wave->ubuf_d, 3*(wave->nx)*(wave->ny)*sizeof(Number_t)));
+	wave->isBulk_d = NULL;
+	cudaCheckError(cudaMalloc((void**)&wave->isBulk_d, (wave->nx)*(wave->ny)*sizeof(bool)));
+	wave->gradient_d = NULL;
+	cudaCheckError(cudaMalloc((void**)&wave->gradient_d, 2*(wave->nx)*(wave->ny)*sizeof(Number_t)));
 
 	//Set the pressures
+	for(int i = 0; i < ny; i++){
+		Number_t y = wave_sim_get_y(wave, i);
+		for(int j = 0; j < nx; j++){
+			Number_t x = wave_sim_get_x(wave, j);
+			if((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5) < radius*radius){
+				wave->isBulk[j + nx*i] = false;
+			} else{
+				wave->isBulk[j + nx*i] = true;
+			}
+			wave->gradient[2*(j + nx*i)] = gradient(x+wave->dx/2, y, 0);
+			wave->gradient[2*(j + nx*i)+1] = gradient(x, y+wave->dy/2, 1);
+		}
+	}
+
 	Number_t * u = wave->ubuf;
 	for(int i = 0; i < ny; i++){
 		Number_t y = wave_sim_get_y(wave, i);
@@ -81,31 +119,9 @@ Cuda_PML_Wave_2d_t wave_sim_init(Number_t xmin, Number_t ymin,
 	}
 	//Set the velocities
 	for(int i = 0; i < ny; i++){
-		if(i == ny-1){
-			for(int j = 0; j < nx; j++){
-				if(j == nx-1){
-					u[3*(j + i*nx) + 1] = 0;
-					u[3*(j + i*nx) + 2] = 0;
-				} else{
-					// u[3*(j + i*nx) + 1] = -(u[3*(j+1 + i*nx)] - u[3*(j + i*nx)])*wave->dt/wave->dx;
-					u[3*(j + i*nx) + 1] = 0;
-					u[3*(j + i*nx) + 2] = 0;
-				}
-			}
-		} else{
-			for(int j = 0; j < nx; j++){
-				if(j == nx-1){
-					u[3*(j + i*nx) + 1] = 0;
-					u[3*(j + i*nx) + 2] = 0;
-					// u[3*(j + i*nx) + 1] = 0;
-					// u[3*(j + i*nx) + 2] = -(u[3*(j + (i+1)*nx)] - u[3*(j + i*nx)])*wave->dt/wave->dy;
-				} else{
-					u[3*(j + i*nx) + 1] = 0;
-					u[3*(j + i*nx) + 2] = 0;
-					// u[3*(j + i*nx) + 1] = -(u[3*(j+1 + i*nx)] - u[3*(j + i*nx)])*wave->dt/wave->dx;
-					// u[3*(j + i*nx) + 2] = -(u[3*(j + (i+1)*nx)] - u[3*(j + i*nx)])*wave->dt/wave->dy;
-				}
-			}
+		for(int j = 0; j < nx; j++){
+			u[3*(j + i*nx) + 1] = 0;
+			u[3*(j + i*nx) + 2] = 0;
 		}
 	}
 
@@ -113,6 +129,8 @@ Cuda_PML_Wave_2d_t wave_sim_init(Number_t xmin, Number_t ymin,
 
 	Number_t * u_d = wave->ubuf_d;
 	cudaCheckError(cudaMemcpy(u_d, u, 3*(wave->nx)*(wave->ny)*sizeof(Number_t), cudaMemcpyHostToDevice));
+	cudaCheckError(cudaMemcpy(wave->isBulk_d, wave->isBulk, (wave->nx)*(wave->ny)*sizeof(bool), cudaMemcpyHostToDevice));
+	cudaCheckError(cudaMemcpy(wave->gradient_d, wave->gradient, 2*(wave->nx)*(wave->ny)*sizeof(Number_t), cudaMemcpyHostToDevice));
 
 	Number_t cco[11] = {wave->c, wave->dt,
 				 	wave->dx, wave->dy,
@@ -156,9 +174,13 @@ void wave_sim_step(Cuda_PML_Wave_2d_t wave){
 
 	dim3 blockDim(threads_x, threads_y, 1);
 	cuda_pml_wave_2d_velocity_kernel<<< gridDim, blockDim >>>(wave->ubuf_d,
-													 wave->nx, wave->ny);
+															  wave->gradient_d,
+															  wave->isBulk_d,
+															  wave->t,
+													 		  wave->nx, wave->ny);
 	cudaCheckError(cudaGetLastError());
 	cuda_pml_wave_2d_pressure_kernel<<< gridDim, blockDim >>>(wave->ubuf_d,
+															  wave->isBulk_d,
 													 wave->nx, wave->ny);
 	cudaCheckError(cudaGetLastError());
 
