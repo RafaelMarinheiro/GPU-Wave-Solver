@@ -32,7 +32,8 @@ __device__ __forceinline__ Number_t pan_wave_3d_gradient(const Number_t idt, con
 }
 
 __device__ Number_t PAN_Mitchelli(Number_t t, Number_t h){
-	Number_t x = abs(t - 2*h)/h;
+	Number_t x = (t - 2*h)/h;
+	x = x > 0? x : -x;
 	Number_t ret = 0;
 	if(x < 1.0){
 		x = 1 - x;

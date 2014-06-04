@@ -40,8 +40,8 @@ Number_t * wave_sim_get_u(Cuda_PML_Wave_2d_t wave){
 	return wave->ubuf;
 }
 
-double gradient(double x, double y, int dim){
-	double dist = sqrt((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5));
+Number_t gradient(Number_t x, Number_t y, int dim){
+	Number_t dist = sqrt((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5));
 	if(dim == 0){
 		return (x-0.5)/dist;
 	} else{

@@ -33,11 +33,11 @@ int main(int argc, char** argv){
 		Cpu_PML_Wave_2d_t wave;
 	#endif
 
-	int nx = 2200;
+	int nx = 256;
 	char filename[1024];
 	int ny = nx;
 	printf("%.3lf/n", 3*sizeof(Number_t)*(nx)*(nx)/(1024.0*1024.0*1024.0));
-	int nsteps = 10;
+	int nsteps = 200;
 	Number_t c = 0.34029;
 	Number_t * u = NULL;
 	wave = wave_sim_init(0, 0, 1, 1,
@@ -56,9 +56,9 @@ int main(int argc, char** argv){
 		u = wave_sim_get_u(wave);
 		printf("Frame %d\n", step);
 		sprintf(filename, "frames/frame%d", step);
-		// FILE *fp = fopen(filename, "w+");
-		// writeToFile(fp, u, nx, ny);
-		// fclose(fp);
+		FILE *fp = fopen(filename, "w+");
+		writeToFile(fp, u, nx, ny);
+		fclose(fp);
 		wave_sim_step(wave);
 	}
 

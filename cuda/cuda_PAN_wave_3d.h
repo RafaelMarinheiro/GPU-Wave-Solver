@@ -1,7 +1,7 @@
 #ifndef Cuda_PAN_3D_WAVE_SOLVER_H
 #define Cuda_PAN_3D_WAVE_SOLVER_H
 
-#include "../defines.h"
+#include "../defines.h" 
 #include <boost/function.hpp>
 
 struct Cuda_PAN_Wave_3d_sim_data_t;

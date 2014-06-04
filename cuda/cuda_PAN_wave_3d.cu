@@ -154,7 +154,7 @@ Cuda_PAN_Wave_3d_t wave_sim_init(Number_t xmin, Number_t ymin, Number_t zmin,
 			Number_t y = wave_sim_get_y(wave, j);
 			for(int i = 0; i < nx; i++){
 				Number_t x = wave_sim_get_x(wave, i);
-				double val = initial(x, y, z);
+				Number_t val = initial(x, y, z);
 				int idx = 4*6*(i + nx*(j + ny*k));
 				u[idx] = val;
 				u[idx+1] = val;
@@ -233,12 +233,12 @@ void wave_sim_step(Cuda_PAN_Wave_3d_t wave){
 													 		  wave->ny,
 													 		  wave->nz);
 	cudaCheckError(cudaGetLastError());
-	cuda_pan_wave_3d_pressure_kernel<<< gridDim, blockDim >>>(wave->ubuf_d,
-															  wave->isBulk_d,
-															  wave->nx,
-															  wave->ny,
-															  wave->nz);
-	cudaCheckError(cudaGetLastError());
+	// cuda_pan_wave_3d_pressure_kernel<<< gridDim, blockDim >>>(wave->ubuf_d,
+	// 														  wave->isBulk_d,
+	// 														  wave->nx,
+	// 														  wave->ny,
+	// 														  wave->nz);
+	// cudaCheckError(cudaGetLastError());
 
 	//Copy back
 	cudaCheckError(cudaMemcpy(u, u_d, 4*6*(wave->nx)*(wave->ny)*(wave->nz)*sizeof(Number_t), cudaMemcpyDeviceToHost));

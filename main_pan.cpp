@@ -50,9 +50,9 @@ int main(int argc, char** argv){
 	#endif
 
 	int nx = 176;
-	double cellsize = 1.0/nx;
+	Number_t cellsize = 1.0/nx;
 	char filename[1024];
-	printf("%.3lf/n", 3*sizeof(Number_t)*(nx)*(nx)/(1024.0*1024.0*1024.0));
+	printf("%.3lf/n", 6*sizeof(Number_t)*(nx)*(nx)*(nx)/(1024.0*1024.0*1024.0));
 	int nsteps = 10;
 	Number_t c = 0.34029;
 	Number_t dt = 0.6/(nx*c);
