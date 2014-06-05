@@ -208,7 +208,14 @@ Cuda_PAN_Wave_3d_t wave_sim_init(Number_t xmin, Number_t ymin, Number_t zmin,
 
 void wave_sim_free(Cuda_PAN_Wave_3d_t wave){
 	cudaFreeHost(wave->ubuf);
+	cudaFreeHost(wave->isBulk);
+	cudaFreeHost(wave->gradient);
+	cudaFreeHost(wave->listeningOutput);
 	cudaFree(wave->ubuf_d);
+	cudaFree(wave->isBulk_d);
+	cudaFree(wave->gradient_d);
+	cudaFree(wave->listeningOutput_d);
+	cudaFree(wave->listening_positions_d);
 	free(wave);
 }
 
@@ -277,4 +284,26 @@ Number_t * wave_listen(Cuda_PAN_Wave_3d_t wave, int field){
 	//Copy back
 	cudaCheckError(cudaMemcpy(wave->listeningOutput+linstride, wave->listeningOutput_d, wave->listening_count*sizeof(Number_t), cudaMemcpyDeviceToHost));
 	return wave->listeningOutput+linstride;
+}
+
+void wave_sim_get_divisions(const Cuda_PAN_Wave_3d_t wave, int * nx, int * ny, int * nz){
+	(*nx) = wave->nx;
+	(*ny) = wave->ny;
+	(*nz) = wave->nz;
+}
+
+Number_t wave_sim_get_current_time(const Cuda_PAN_Wave_3d_t wave){
+	return wave->t;
+}
+
+void wave_sim_get_bounds(const Cuda_PAN_Wave_3d_t wave,
+						 Number_t * xmin, Number_t * xmax,
+						 Number_t * ymin, Number_t * ymax,
+						 Number_t * zmin, Number_t * zmax){
+	(*xmin) = wave->xmin;
+	(*xmax) = wave->xmax;
+	(*ymin) = wave->ymin;
+	(*ymax) = wave->ymax;
+	(*zmin) = wave->zmin;
+	(*zmax) = wave->zmax;
 }
