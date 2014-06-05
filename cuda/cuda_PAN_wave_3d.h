@@ -31,10 +31,9 @@ Number_t wave_sim_get_z(Cuda_PAN_Wave_3d_t wave, int k);
 Number_t * wave_sim_get_u(Cuda_PAN_Wave_3d_t wave);
 
 void wave_sim_step(Cuda_PAN_Wave_3d_t wave);
-void wave_sim_apply_boundary(Cuda_PAN_Wave_3d_t wave);
 
 //positions-> 3*Number_t*pos array
 //output->6*Number_t*pos array
-void wave_listen_at(Cuda_PAN_Wave_3d_t wave, Number_t * positions, Number_t * output);
+Number_t * wave_listen(Cuda_PAN_Wave_3d_t wave, int field);
 
 #endif

@@ -42,10 +42,18 @@ Number_t * wave_sim_get_u(Cuda_PML_Wave_2d_t wave){
 
 Number_t gradient(Number_t x, Number_t y, int dim){
 	Number_t dist = sqrt((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5));
-	if(dim == 0){
-		return (x-0.5)/dist;
+	if(dist < 0.33){
+		if(dim == 0){
+			return -(x-0.5)/dist;
+		} else{
+			return -(y-0.5)/dist;
+		}
 	} else{
-		return (y-0.5)/dist;
+		if(dim == 0){
+			return (x-0.5)/dist;
+		} else{
+			return (y-0.5)/dist;
+		}
 	}
 }
 
@@ -63,7 +71,7 @@ Cuda_PML_Wave_2d_t wave_sim_init(Number_t xmin, Number_t ymin,
 	wave->ymin = ymin;
 	wave->xmax = xmax;
 	wave->ymax = ymax;
-	wave->radius = 0.1;
+	wave->radius = 0.35;
 	Number_t radius = wave->radius;
 	wave->c = c;
 
@@ -99,7 +107,8 @@ Cuda_PML_Wave_2d_t wave_sim_init(Number_t xmin, Number_t ymin,
 		Number_t y = wave_sim_get_y(wave, i);
 		for(int j = 0; j < nx; j++){
 			Number_t x = wave_sim_get_x(wave, j);
-			if((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5) < radius*radius){
+			double dist = (x-0.5)*(x-0.5)+(y-0.5)*(y-0.5);
+			if(dist < radius*radius && dist > radius*radius/2 && y < 0.7){
 				wave->isBulk[j + nx*i] = false;
 			} else{
 				wave->isBulk[j + nx*i] = true;

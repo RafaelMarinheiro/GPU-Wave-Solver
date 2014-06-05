@@ -1,7 +1,7 @@
 CPP=g++
 NVC=nvcc
 CFLAGS=-O2 -Wall
-NVCFLAGS=-arch=sm_12 -O3 -use_fast_math
+NVCFLAGS=-arch=sm_12 --maxrregcount=32 -O4 -lineinfo -use_fast_math
 LIBS=
 
 all: wave_cpu.x wave_cuda.x pml_cpu.x pml_cuda.x pan_cuda.x

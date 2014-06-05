@@ -10,7 +10,7 @@
 
 Number_t gaussian(Number_t x, Number_t y, void * ctx){
 	Number_t stddev = 0.01;
-	Number_t mean = 0.35;
+	Number_t mean = 0.2;
 	Number_t var2 = stddev*stddev*2;
 	Number_t term = sqrt((x-mean)*(x-mean) + (y-mean)*(y-mean));
 	// Number_t term = x-mean;

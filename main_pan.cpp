@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cmath>
+#include <cstdlib>
 
 #ifdef USE_CUDA
 	#include "cuda/cuda_PAN_wave_3d.h"
@@ -53,16 +54,27 @@ int main(int argc, char** argv){
 	Number_t cellsize = 1.0/nx;
 	char filename[1024];
 	printf("%.3lf/n", 6*sizeof(Number_t)*(nx)*(nx)*(nx)/(1024.0*1024.0*1024.0));
-	int nsteps = 10;
+	int nsteps = 500;
 	Number_t c = 0.34029;
 	Number_t dt = 0.6/(nx*c);
 	Number_t * u = NULL;
+	int lis = 20000;
+	Number_t * listening = (Number_t *) malloc(3*lis*sizeof(Number_t));
+	for(int i = 0; i < lis; i++){
+		Number_t x = (Number_t)rand()/RAND_MAX; x = 0.7*x + 0.15;
+		Number_t y = (Number_t)rand()/RAND_MAX; y = 0.7*y + 0.15;
+		Number_t z = (Number_t)rand()/RAND_MAX; z = 0.7*z + 0.15;
+
+		listening[3*i] = x;
+		listening[3*i + 1] = y;
+		listening[3*i + 2] = z;
+	}
 	wave = wave_sim_init(0, 0, 0,
 						 1, 1, 1,
 						 c, 0.6/(nx*c),
 						 cellsize,
-						 0,
-						 NULL,
+						 lis,
+						 listening,
 						 &zeros,
 						 &sphere,
 						 0.5, 0.5, 0.5,
@@ -73,13 +85,19 @@ int main(int argc, char** argv){
 
 
 	for(int step = 0; step < nsteps; step++){
-		u = wave_sim_get_u(wave);
-		printf("Frame %d\n", step);
+		//u = wave_sim_get_u(wave);
+		printf("Frame %d %lf\n", step, 0.6/(nx*c));
 		sprintf(filename, "frames/frame%d", step);
 		// FILE *fp = fopen(filename, "w+");
 		// writeToFile(fp, u, nx, ny);
 		// fclose(fp);
 		wave_sim_step(wave);
+		wave_listen(wave, 0);
+		wave_listen(wave, 1);
+		wave_listen(wave, 2);
+		wave_listen(wave, 3);
+		wave_listen(wave, 4);
+		wave_listen(wave, 5);
 	}
 
 	// 	u = wave_sim_get_u(wave, 0);

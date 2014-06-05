@@ -43,10 +43,21 @@ struct Cuda_PAN_Wave_3d_sim_data_t {
 
 	Number_t xcenter, ycenter, zcenter;
 	Number_t pulse;
+
+	bool updated;
 };
 
 Number_t * wave_sim_get_u(Cuda_PAN_Wave_3d_t wave){
-	return wave->ubuf;
+	if(wave->updated){
+		return wave->ubuf;
+	} else{
+		Number_t * u = wave->ubuf;
+		Number_t * u_d = wave->ubuf_d;
+
+		cudaCheckError(cudaMemcpy(u, u_d, 4*6*(wave->nx)*(wave->ny)*(wave->nz)*sizeof(Number_t), cudaMemcpyDeviceToHost));
+		wave->updated = true;
+		return u;
+	}
 }
 
 Cuda_PAN_Wave_3d_t wave_sim_init(Number_t xmin, Number_t ymin, Number_t zmin,
@@ -70,6 +81,8 @@ Cuda_PAN_Wave_3d_t wave_sim_init(Number_t xmin, Number_t ymin, Number_t zmin,
 	wave->xmax = xmax;
 	wave->ymax = ymax;
 	wave->zmax = zmax;
+
+	wave->updated = true;
 
 	wave->xcenter = xcenter;
 	wave->ycenter = ycenter;
@@ -155,13 +168,14 @@ Cuda_PAN_Wave_3d_t wave_sim_init(Number_t xmin, Number_t ymin, Number_t zmin,
 			for(int i = 0; i < nx; i++){
 				Number_t x = wave_sim_get_x(wave, i);
 				Number_t val = initial(x, y, z);
-				int idx = 4*6*(i + nx*(j + ny*k));
+				int idx = 4*(i + nx*(j + ny*k));
+				int stride = 4*nx*ny*nz;
 				u[idx] = val;
-				u[idx+1] = val;
-				u[idx+2] = val;
-				u[idx+3] = val;
-				u[idx+4] = val;
-				u[idx+5] = val;
+				u[idx+stride] = val;
+				u[idx+2*stride] = val;
+				u[idx+3*stride] = val;
+				u[idx+4*stride] = val;
+				u[idx+5*stride] = val;
 			}
 		}
 	}
@@ -169,8 +183,10 @@ Cuda_PAN_Wave_3d_t wave_sim_init(Number_t xmin, Number_t ymin, Number_t zmin,
 	cudaCheckError(cudaMemcpy(wave->ubuf_d, wave->ubuf, 4*6*(wave->nx)*(wave->ny)*(wave->nz)*sizeof(Number_t), cudaMemcpyHostToDevice));
 	cudaCheckError(cudaMemcpy(wave->isBulk_d, wave->isBulk, (wave->nx)*(wave->ny)*(wave->nz)*sizeof(bool), cudaMemcpyHostToDevice));
 	cudaCheckError(cudaMemcpy(wave->gradient_d, wave->gradient, 3*(wave->nx)*(wave->ny)*(wave->nz)*sizeof(Number_t), cudaMemcpyHostToDevice));
-	cudaCheckError(cudaMemcpy(wave->listening_positions_d, listening_positions, 3*listening_count*sizeof(Number_t), cudaMemcpyHostToDevice));
-
+	if(listening_count > 0){
+		cudaCheckError(cudaMemcpy(wave->listening_positions_d, listening_positions, 3*listening_count*sizeof(Number_t), cudaMemcpyHostToDevice));	
+	}
+	
 	Number_t cco[18] = {wave->c, wave->dt,
 					 	wave->dx, wave->dy,
 					 	wave->xmin, wave->xmax,
@@ -210,54 +226,55 @@ Number_t wave_sim_get_z(Cuda_PAN_Wave_3d_t wave, int k){
 
 
 void wave_sim_step(Cuda_PAN_Wave_3d_t wave){
-	//Copy to GPU
-	Number_t * u = wave->ubuf;
-	Number_t * u_d = wave->ubuf_d;
-
-	cudaCheckError(cudaMemcpy(u_d, u, 4*6*(wave->nx)*(wave->ny)*(wave->nz)*sizeof(Number_t), cudaMemcpyHostToDevice));
-	 
 	size_t blocks_x = ceil(wave->nx/16.0);
 	size_t blocks_y = ceil(wave->ny/16.0);
 	dim3 gridDim(blocks_x, blocks_y, 1);
 	size_t threads_x = 16;
 	size_t threads_y = 16;
 
-	printf("(%d, %d, %d, %d)\n", blocks_x, blocks_y, threads_x, threads_y);
-
 	dim3 blockDim(threads_x, threads_y, 1);
-	cuda_pan_wave_3d_velocity_kernel<<< gridDim, blockDim >>>(wave->ubuf_d,
-															  wave->gradient_d,
-															  wave->isBulk_d,
-															  wave->t,
-													 		  wave->nx,
-													 		  wave->ny,
-													 		  wave->nz);
+	int stride = 4*(wave->nx)*(wave->ny)*(wave->nz);
+	for(int i = 0; i < 6; i++){
+		cuda_pan_wave_3d_velocity_kernel<<< gridDim, blockDim >>>(wave->ubuf_d+i*stride,
+																  wave->gradient_d,
+																  wave->isBulk_d,
+																  wave->t,
+														 		  wave->nx,
+														 		  wave->ny,
+														 		  wave->nz,
+														 		  i);
+		cudaCheckError(cudaGetLastError());
+		cuda_pan_wave_3d_pressure_kernel<<< gridDim, blockDim >>>(wave->ubuf_d+i*stride,
+																  wave->isBulk_d,
+																  wave->nx,
+																  wave->ny,
+																  wave->nz);
+	}
 	cudaCheckError(cudaGetLastError());
-	// cuda_pan_wave_3d_pressure_kernel<<< gridDim, blockDim >>>(wave->ubuf_d,
-	// 														  wave->isBulk_d,
-	// 														  wave->nx,
-	// 														  wave->ny,
-	// 														  wave->nz);
-	// cudaCheckError(cudaGetLastError());
 
-	//Copy back
-	cudaCheckError(cudaMemcpy(u, u_d, 4*6*(wave->nx)*(wave->ny)*(wave->nz)*sizeof(Number_t), cudaMemcpyDeviceToHost));
-	
+	wave->updated = false;
 	wave->t += wave->dt;
-	wave_sim_apply_boundary(wave);
-	
 }
 
-void wave_sim_apply_boundary(Cuda_PAN_Wave_3d_t wave){
-	Number_t * u = wave->ubuf;
-	int nx = wave->nx;
-	int ny = wave->ny;
+Number_t * wave_listen(Cuda_PAN_Wave_3d_t wave, int field){
+	size_t blocks_x = ceil(wave->listening_count/256.0);
+	dim3 gridDim(blocks_x, 1, 1);
+	size_t threads_x = 256;
 
-	for(int i = 0; i < ny; i++){
-		u[3*(nx-1 + nx*i)+1] = 0;
-	}
+	dim3 blockDim(threads_x, 1, 1);
+	int stride = 4*(wave->nx)*(wave->ny)*(wave->nz)*field;
+	int linstride = wave->listening_count*field;
 
-	for(int j = 0; j < nx; j++){
-		u[3*(j + nx*(ny-1))+2] = 0;
-	}
+	cuda_pan_wave_3d_listen_kernel<<<gridDim, blockDim>>>(wave->ubuf_d+stride,
+														  wave->listeningOutput_d,
+														  wave->listening_count,
+														  wave->listening_positions_d,
+														  wave->nx,
+														  wave->ny,
+														  wave->nz);
+	cudaCheckError(cudaGetLastError());
+
+	//Copy back
+	cudaCheckError(cudaMemcpy(wave->listeningOutput+linstride, wave->listeningOutput_d, wave->listening_count*sizeof(Number_t), cudaMemcpyDeviceToHost));
+	return wave->listeningOutput+linstride;
 }

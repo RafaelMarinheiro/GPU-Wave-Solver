@@ -31,7 +31,7 @@ __device__ __forceinline__ Number_t pan_wave_3d_gradient(const Number_t idt, con
 	return -1.0/(density*cellSize*(idt + absortion/2.0));
 }
 
-__device__ Number_t PAN_Mitchelli(Number_t t, Number_t h){
+__device__ Number_t PAN_Mitchelli(const Number_t t, const Number_t h){
 	Number_t x = (t - 2*h)/h;
 	x = x > 0? x : -x;
 	Number_t ret = 0;
@@ -51,10 +51,10 @@ __device__ Number_t PAN_Mitchelli(Number_t t, Number_t h){
 	return ret;
 }
 
-__device__ Number_t PAN_boundary(Number_t x, Number_t y, Number_t z, int field, int component){
-	Number_t cx = x-kernel_constants[13];
-	Number_t cy = y-kernel_constants[14];
-	Number_t cz = z-kernel_constants[15];
+__device__ Number_t PAN_boundary(const Number_t x, const Number_t y, const Number_t z, const int field, const int component){
+	const Number_t cx = x-kernel_constants[13];
+	const Number_t cy = y-kernel_constants[14];
+	const Number_t cz = z-kernel_constants[15];
 
 	Number_t retx=0, rety=0, retz=0;
 
